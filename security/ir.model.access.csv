@@ -1,0 +1,6 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_note_section,access_note_section,model_note_section,,1,1,1,1
+access_secret_degree,access_secret_degree,model_secret_degree,,1,1,1,1
+access_ticket_type,access_ticket_type,model_ticket_type,,1,1,1,1
+access_priority,access_priority,model_priority,,1,1,1,1
+access_ticket,access_ticket,model_ticket,,1,1,1,1

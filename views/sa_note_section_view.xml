@@ -1,0 +1,59 @@
+<?xml version='1.0' encoding='utf-8'?>
+<odoo>
+    <!-- Kanaban for note section -->
+    <record id="view_note_section_kanban" model="ir.ui.view">
+        <field name="name">note.section.kanban</field>
+        <field name="model">note.section</field>
+        <field name="arch" type="xml">
+            <kanban string="Ad Smart Admin">
+                <templates>
+                    <t t-name="kanban-box">
+                        <div class="oe_kanban_card oe_kanban_global_click">
+                            <strong><field name="name"/></strong>
+                            <!-- <div><field name="description"/></div> -->
+                        </div>
+                    </t>
+                </templates>
+            </kanban>
+        </field>
+    </record>
+
+    <!-- Tree NoteSection -->
+    <record id="view_note_section_tree" model="ir.ui.view">
+        <field name="name">note_section.tree</field>
+        <field name="model">note.section</field>
+        <field name="arch" type="xml">
+            <tree editable="top" string="Note_Section" sample="1" multi_edit="1">
+                <field name="name" optional="show"/>
+                <field name="foreign_name" optional="hide"/>
+                <field name="code" optional="hide"/>
+                <field name="connect_with" optional="hide"/>
+                <field name="connect_with_delegate" optional="hide"/>
+                <field name="serial_number" optional="hide"/>
+                <field name="note" optional="hide"/>
+            </tree>
+        </field>
+    </record>
+
+    <!-- Group_By NoteSection -->
+    <record id="view_note_section_filter" model="ir.ui.view">
+        <field name="name">note_section.list.select</field>
+        <field name="model">note.section</field>
+        <field name="arch" type="xml">
+            <search string="Note_Section">
+                <group expand="0" string="Group By">
+                    <filter string="Name" name="name" domain="[]" context="{'group_by': 'name'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_notesection" model="ir.actions.act_window">
+        <field name="name">Note Sections</field>
+        <field name="res_model">note.section</field>
+        <field name="view_mode">tree,form</field>
+        <!-- <field name="view_mode">kanban,tree,form,pivot,graph,activity</field> -->
+    </record>
+
+    <menuitem id="menu_note_section" name="Note Sections" parent="menu_menu_main" action="action_notesection"/>
+</odoo>

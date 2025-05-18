@@ -1,0 +1,21 @@
+<odoo>
+
+    <menuitem id="menu_main" name="Smart Amin"/>
+    <menuitem id="menu_menu_main" name="Preparation" parent="menu_main"/>
+    <menuitem id="menu_memos_root" name="oprations" parent="menu_main"/>
+    
+    <menuitem id="menu_secret_degree" name="Secret Degrees" parent="menu_menu_main" action="action_secretdegree"/>
+    <menuitem id="menu_ticket_type" name="Ticket Types" parent="menu_menu_main" action="action_tickettype"/>
+    
+    <menuitem id="menu_incoming_memos"
+            name="ticket in"
+            parent="menu_memos_root"
+            action="action_incoming_memos"
+            sequence="1"/>
+    <menuitem id="menu_outgoing_memos"
+            name="ticket out"
+            parent="menu_memos_root"
+            action="action_outgoing_memos"
+            sequence="2"/>
+
+</odoo>

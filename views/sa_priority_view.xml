@@ -1,0 +1,80 @@
+<?xml version='1.0' encoding='utf-8'?>
+<odoo>
+     <!-- tree for ticket type -->
+    <record id="view_ticket_type_tree" model="ir.ui.view">
+        <field name="name">ticket_type.tree</field>
+        <field name="model">ticket.type</field>
+        <field name="arch" type="xml">
+            <tree string="Ticket_Type">
+                <field name="name"/>
+                <field name="foreign_name"/>
+                <field name="code"/>
+                <field name="serial_number"/>
+                <field name="color"/>
+                <field name="icon"/>
+            </tree>
+        </field>
+    </record>
+
+
+    <record id="view_priority_form" model="ir.ui.view">
+        <field name="name">priority.form</field>
+        <field name="model">priority</field>
+        <field name="arch" type="xml">
+            <form>
+                <sheet>
+                    <group>
+                        <group>
+                            <field name="name"/>
+                            <field name="color" widget="color_picker"/>  <!-- منتقي الألوان -->
+                        </group>
+                        <group>
+                            <field name="is_default"/>
+                            <field name="code" />
+                        </group>
+                        <group>
+                            <field name="icon_priority"/>
+                        </group>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- Tree priority -->
+    <record id="view_priority_tree" model="ir.ui.view">
+        <field name="name">priority.tree</field>
+        <field name="model">priority</field>
+        <field name="arch" type="xml">
+            <tree editable="top" string="Priorities" sample="1" multi_edit="1">
+                <field name="name" optional="show"/>
+                <field name="code" optional="hide"/>
+                <field name="is_default" optional="hide"/>
+                <field name="color" widget="color_picker" optional="show"/>
+                <field name="icon_priority" optional="hide"/>
+            </tree>
+        </field>
+    </record>
+
+    <!-- Group_By priority -->
+    <record id="view_priority_filter" model="ir.ui.view">
+        <field name="name">priority.list.select</field>
+        <field name="model">priority</field>
+        <field name="arch" type="xml">
+            <search string="Priorities">
+                <group expand="0" string="Group By">
+                    <filter string="Name" name="name" domain="[]" context="{'group_by': 'name'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+  
+    <!-- for menuitem -->
+    <record id="action_priority_view" model="ir.actions.act_window">
+        <field name="name">Priority</field>
+        <field name="res_model">priority</field>
+        <field name="view_mode">tree,form</field>
+    </record>
+    
+    <menuitem id="menu_priority" name="Priority" parent="menu_menu_main" action="action_priority_view"/>
+</odoo>

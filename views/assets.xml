@@ -1,0 +1,5 @@
+<!-- <template id="assets_backend" name="ad_smart_admin assets" inherit_id="web.assets_backend">
+    <xpath expr="." position="inside">
+        <script type="text/javascript" src="/ad_smart_admin/static/src/js/field_visibility.js"/>
+    </xpath>
+</template> -->

@@ -1,0 +1,114 @@
+<?xml version='1.0' encoding='utf-8'?>
+<odoo>
+    <!-- form for ticket info -->
+    <record id="view_ticket_form" model="ir.ui.view">
+        <field name="name">ticket.form</field>
+        <field name="model">ticket</field>
+        <field name="arch" type="xml">
+            <form string="Ticket">
+                <sheet>
+                    <div class="oe_title">
+                        <h1>
+                            <field name="note_number" readonly="1"/>
+                        </h1>
+                    </div>
+                    <group name="ticket_header">
+                        <group>
+                            <field name="ticket_type" domain="[('code', '=', context.get('code'))]"/>
+                            <field name="note_section"/>
+                            <field name="secret_degree"/>
+                            <field name="priority"/>
+                            <field name="partner"/>
+                        </group>
+                        <group>
+                            <field name="subject"/>
+                            <field name="date"/>
+                            <field name="company_id"/>
+                        </group>
+                    </group>
+                    <notebook>
+                        <page string="Topic" name="topic">
+                            <group>
+                                <field name="topic">
+                                </field>
+                            </group>
+                        </page>
+                        <page string="Assign" name="assign">
+                            <group>
+                                <group>
+                                    <field name="administration_assign" widget="many2one_avatar_user"/>
+                                    <field name="assing_to_id" widget="many2one_avatar_user"/>
+                                </group>
+                            </group>
+                        </page>
+                    </notebook>
+                </sheet>
+                <div class="oe_chatter">
+                    <field name="message_follower_ids"/>
+                    <field name="activity_ids"/>
+                    <field name="message_ids" options="{'post_refresh': 'recipients'}"/>
+                </div>
+            </form>
+        </field>
+    </record>
+
+    <!-- Group_By for ticket -->
+    <record id="view_ticket_filter" model="ir.ui.view">
+        <field name="name">ticket.list.select</field>
+        <field name="model">ticket</field>
+        <field name="arch" type="xml">
+            <search string="Ticket">
+                <field name="note_section" string="Ticket"
+                    filter_domain="['|', '|',
+                    ('note_section', 'ilike', self),
+                    ('secret_degree', 'ilike', self),
+                    ('priority', 'ilike', self)]"/>
+                    <field name="subject" string="Subject" filter_domain="[
+                    ('subject', 'ilike', self)
+                    ]"/>
+                    <field name="note_number" string="Note_Number" filter_domain="[
+                    ('note_number', 'ilike', self)
+                    ]"/>
+                <group expand="0" string="Group By">
+                    <filter string="Note Section" name="note_section" domain="[]" context="{'group_by': 'note_section'}"/>
+                    <filter string="Secret Degree" name="secret_degree" domain="[]" context="{'group_by': 'secret_degree'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <!-- tree for ticket -->
+    <record id="view_ticket_tree" model="ir.ui.view">
+        <field name="name">ticket.tree</field>
+        <field name="model">ticket</field>
+        <field name="arch" type="xml">
+            <tree string="Ticket">
+                <field name="note_number"/>
+                <field name="subject"/>
+                <field name="topic"/>
+                <field name="ticket_type"/>
+                <field name="note_section"/>
+                <field name="secret_degree_color" optional="hide" />
+                <field name="secret_degree" widget="badge" options="{'color_field': 'secret_degree_color'}"/>
+                <field name="priority"/>
+                <field name="company_id"/>
+            </tree>
+        </field>
+    </record>
+
+    <record id="action_incoming_memos" model="ir.actions.act_window">
+        <field name="name">Ticket In</field>
+        <field name="res_model">ticket</field>
+        <field name="view_mode">tree,form</field>
+        <field name="domain">[('ticket_type.code', '=', 'in')]</field>
+        <field name="context">{'code': 'in'}</field>
+    </record>
+
+    <record id="action_outgoing_memos" model="ir.actions.act_window">
+        <field name="name">Ticket Out</field>
+        <field name="res_model">ticket</field>
+        <field name="view_mode">tree,form</field>
+        <field name="domain">[('ticket_type.code', '=', 'out')]</field>
+        <field name="context">{'code': 'out'}</field>
+    </record>
+</odoo>

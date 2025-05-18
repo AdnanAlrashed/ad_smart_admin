@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+      <!-- tree for ticket type -->
+    <record id="view_ticket_type_tree" model="ir.ui.view">
+        <field name="name">ticket.type.tree</field>
+        <field name="model">ticket.type</field>
+        <field name="arch" type="xml">
+            <tree editable="top" string="Ticket Type" sample="1" multi_edit="1">
+                <field name="name"/>
+                <field name="foreign_name" optional="hide"/>
+                <field name="code"/>
+                <field name="serial_number"/>
+                <field name="color" widget="color_picker" optional="show"/>
+                <field name="icon"/>
+            </tree>
+        </field>
+    </record>
+
+    <record id="action_tickettype" model="ir.actions.act_window">
+        <field name="name">Ticket Types</field>
+        <field name="res_model">ticket.type</field>
+        <field name="view_mode">tree,form</field>
+    </record>
+    
+
+</odoo>
