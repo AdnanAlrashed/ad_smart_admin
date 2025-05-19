@@ -1,11 +1,53 @@
 <?xml version='1.0' encoding='utf-8'?>
 <odoo>
-    <!-- form for ticket info -->
+    <!-- Form View Enhanced -->
     <record id="view_ticket_form" model="ir.ui.view">
         <field name="name">ticket.form</field>
         <field name="model">ticket</field>
         <field name="arch" type="xml">
             <form string="Ticket">
+                <header>
+                    <!-- <button name="action_open" string="فتح" 
+                            invisible="state != 'draft'" 
+                            class="oe_highlight" 
+                            groups="ad_smart_admin.group_ticket_user"/> -->
+
+                    <button name="action_open" string="فتح" 
+                        type="object"
+                        invisible="state != 'draft'" 
+                        class="oe_highlight" 
+                        groups="ad_smart_admin.group_ticket_user"/>
+                    
+                    <!-- <button name="action_start_progress" string="بدء المعالجة" 
+                            invisible="state != 'open'" 
+                            groups="ad_smart_admin.group_ticket_technical"/> -->
+
+                    <button name="action_start_progress" string="بدء المعالجة" 
+                        type="object"
+                        invisible="state != 'open'" 
+                        groups="ad_smart_admin.group_ticket_technical"/>
+
+                    <button name="action_mark_pending" string="تعليق" 
+                            type="object"
+                            invisible="state != 'in_progress'" 
+                            groups="ad_smart_admin.group_ticket_technical"/>
+
+                    <button name="action_mark_solved" string="تم الحل" 
+                            type="object"
+                            invisible="state not in ['in_progress','pending']" 
+                            groups="ad_smart_admin.group_ticket_technical"/>
+
+                    <button name="action_cancel" string="إلغاء"
+                            type="object"
+                            invisible="state not in ['draft','open','in_progress','pending']" 
+                            groups="ad_smart_admin.group_ticket_manager"/>
+
+                    <button name="action_reset_to_draft" string="إعادة تعيين" 
+                            type="object"
+                            invisible="state not in ['cancelled','solved']" 
+                            groups="ad_smart_admin.group_ticket_manager"/>
+                    <field name="state" widget="statusbar" statusbar_visible="draft,open,in_progress,pending,solved,cancelled" options="{'clickable': '1'}"/>
+                </header>
                 <sheet>
                     <div class="oe_title">
                         <h1>
@@ -15,100 +57,153 @@
                     <group name="ticket_header">
                         <group>
                             <field name="ticket_type" domain="[('code', '=', context.get('code'))]"/>
-                            <field name="note_section"/>
+                            <field name="note_section" options="{'no_create': True}"/>
                             <field name="secret_degree"/>
                             <field name="priority"/>
-                            <field name="partner"/>
                         </group>
                         <group>
-                            <field name="subject"/>
-                            <field name="date"/>
-                            <field name="company_id"/>
+                            <field name="subject" placeholder="أدخل موضوع التذكرة..."/>
+                            <field name="partner" options="{'no_create': True}"/>
+                            <field name="date" options="{'datepicker': {'daysOfWeekDisabled': [5,6]}}"/>
+                            <field name="company_id" groups="base.group_multi_company"/>
                         </group>
                     </group>
                     <notebook>
-                        <page string="Topic" name="topic">
+                        <page string="المحتوى" name="content">
+                            <field name="topic" class="oe_no_empty"/>
+                        </page>
+                        <page string="التعيين" name="assign">
                             <group>
-                                <field name="topic">
-                                </field>
+                                <field name="administration_assign" widget="many2one_avatar_user" options="{'no_create': True}"/>
+                                <field name="assing_to_id" widget="many2one_avatar_user" options="{'no_create': True}"/>
                             </group>
                         </page>
-                        <page string="Assign" name="assign">
-                            <group>
-                                <group>
-                                    <field name="administration_assign" widget="many2one_avatar_user"/>
-                                    <field name="assing_to_id" widget="many2one_avatar_user"/>
-                                </group>
-                            </group>
+                        <page string="الملاحظات" name="notes">
+                            <field name="note" placeholder="أدخل أي ملاحظات إضافية..."/>
+                        </page>
+                        <page string="المرفقات" name="attachments" invisible="not attachment_number or attachment_number == 0">
+                            <field name="attachment_number" invisible="1"/>
+                            <field name="message_main_attachment_id" 
+                                filename="datas_fname"
+                                string="المرفق الرئيسي"/>
                         </page>
                     </notebook>
                 </sheet>
                 <div class="oe_chatter">
-                    <field name="message_follower_ids"/>
-                    <field name="activity_ids"/>
-                    <field name="message_ids" options="{'post_refresh': 'recipients'}"/>
+                    <field name="message_follower_ids" widget="mail_followers"/>
+                    <field name="activity_ids" widget="mail_activity"/>
+                    <field name="message_ids" widget="mail_thread" options="{'post_refresh': 'recipients'}"/>
                 </div>
             </form>
         </field>
     </record>
 
-    <!-- Group_By for ticket -->
+    <!-- Search View Enhanced -->
     <record id="view_ticket_filter" model="ir.ui.view">
         <field name="name">ticket.list.select</field>
         <field name="model">ticket</field>
         <field name="arch" type="xml">
-            <search string="Ticket">
-                <field name="note_section" string="Ticket"
-                    filter_domain="['|', '|',
-                    ('note_section', 'ilike', self),
-                    ('secret_degree', 'ilike', self),
-                    ('priority', 'ilike', self)]"/>
-                    <field name="subject" string="Subject" filter_domain="[
-                    ('subject', 'ilike', self)
-                    ]"/>
-                    <field name="note_number" string="Note_Number" filter_domain="[
-                    ('note_number', 'ilike', self)
-                    ]"/>
-                <group expand="0" string="Group By">
-                    <filter string="Note Section" name="note_section" domain="[]" context="{'group_by': 'note_section'}"/>
-                    <filter string="Secret Degree" name="secret_degree" domain="[]" context="{'group_by': 'secret_degree'}"/>
+            <search string="بحث التذاكر">
+                <field name="note_number" string="رقم المذكرة"/>
+                <field name="subject" string="الموضوع" filter_domain="[('subject', 'ilike', self)]"/>
+                <field name="partner" string="العميل"/>
+                <field name="state" string="الحالة"/>
+                
+                <filter string="تذاكر مفتوحة" name="open_tickets" domain="[('state','=','open')]"/>
+                <filter string="قيد المعالجة" name="in_progress_tickets" domain="[('state','=','in_progress')]"/>
+                <filter string="معلقة" name="pending_tickets" domain="[('state','=','pending')]"/>
+                
+                <separator/>
+                
+                <group expand="0" string="تجميع حسب">
+                    <filter string="نوع التذكرة" name="group_by_type" context="{'group_by':'ticket_type'}"/>
+                    <filter string="القسم" name="group_by_section" context="{'group_by':'note_section'}"/>
+                    <filter string="درجة السرية" name="group_by_secret" context="{'group_by':'secret_degree'}"/>
+                    <filter string="الحالة" name="group_by_state" context="{'group_by':'state'}"/>
                 </group>
             </search>
         </field>
     </record>
 
-    <!-- tree for ticket -->
+    <!-- Tree View Enhanced -->
     <record id="view_ticket_tree" model="ir.ui.view">
         <field name="name">ticket.tree</field>
         <field name="model">ticket</field>
         <field name="arch" type="xml">
-            <tree string="Ticket">
-                <field name="note_number"/>
-                <field name="subject"/>
-                <field name="topic"/>
-                <field name="ticket_type"/>
-                <field name="note_section"/>
-                <field name="secret_degree_color" optional="hide" />
+            <tree string="التذاكر" decoration-muted="state == 'cancelled'" decoration-success="state == 'solved'">
+                <field name="note_number" string="الرقم"/>
+                <field name="subject" string="الموضوع"/>
+                <field name="partner" string="العميل"/>
+                <field name="ticket_type" string="النوع"/>
+                <field name="state" widget="badge" decoration-info="state == 'in_progress'" decoration-warning="state == 'pending'"/>
                 <field name="secret_degree" widget="badge" options="{'color_field': 'secret_degree_color'}"/>
-                <field name="priority"/>
-                <field name="company_id"/>
+                <field name="priority" widget="badge"/>
+                <field name="date" string="التاريخ"/>
+                <field name="assing_to_id" widget="many2one_avatar_user" string="معين إلى"/>
             </tree>
         </field>
     </record>
 
+    <!-- Actions Enhanced -->
     <record id="action_incoming_memos" model="ir.actions.act_window">
-        <field name="name">Ticket In</field>
+        <field name="name">التذاكر الواردة</field>
         <field name="res_model">ticket</field>
-        <field name="view_mode">tree,form</field>
+        <field name="view_mode">tree,kanban,form,graph,pivot</field>
         <field name="domain">[('ticket_type.code', '=', 'in')]</field>
         <field name="context">{'code': 'in'}</field>
+        <field name="search_view_id" ref="view_ticket_filter"/>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">لا توجد تذاكر واردة</p>
+        </field>
     </record>
 
     <record id="action_outgoing_memos" model="ir.actions.act_window">
-        <field name="name">Ticket Out</field>
+        <field name="name">التذاكر الصادرة</field>
         <field name="res_model">ticket</field>
-        <field name="view_mode">tree,form</field>
+        <field name="view_mode">tree,kanban,form,graph,pivot</field>
         <field name="domain">[('ticket_type.code', '=', 'out')]</field>
         <field name="context">{'code': 'out'}</field>
+        <field name="search_view_id" ref="view_ticket_filter"/>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">لا توجد تذاكر صادرة</p>
+        </field>
     </record>
+
+    <!-- Dashboard View -->
+    <record id="view_ticket_kanban" model="ir.ui.view">
+        <field name="name">ticket.kanban</field>
+        <field name="model">ticket</field>
+        <field name="arch" type="xml">
+            <kanban default_group_by="state">
+                <field name="note_number"/>
+                <field name="state"/>
+                <templates>
+                    <t t-name="kanban-box">
+                        <div class="oe_kanban_card">
+                            <div class="oe_kanban_content">
+                                <div class="o_kanban_record_title">
+                                    <field name="note_number"/> - <field name="subject"/>
+                                </div>
+                                <div t-attf-class="oe_kanban_state oe_kanban_state_{{record.state.raw_value}}">
+                                    <field name="state"/>
+                                </div>
+                            </div>
+                        </div>
+                    </t>
+                </templates>
+            </kanban>
+        </field>
+    </record>
+
+    <menuitem id="menu_incoming_memos"
+            name="ticket in"
+            parent="menu_memos_root"
+            action="action_incoming_memos"
+            sequence="1"/>
+
+            <menuitem id="menu_outgoing_memos"
+            name="ticket out"
+            parent="menu_memos_root"
+            action="action_outgoing_memos"
+            sequence="2"/>
 </odoo>
