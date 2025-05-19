@@ -11,6 +11,7 @@
     'depends': ['base','web','mail', 'hr', 'rating', 'utm','portal'],
     'data': [
         # 'views/assets.xml',
+        'security/groups.xml',
         'security/ir.model.access.csv',  # صلاحيات الوصول
         'security/record_rules.xml',  # صلاحيات الوصول
         'views/sa_ticket_type_view.xml',          # واجهات انواع المذكرات

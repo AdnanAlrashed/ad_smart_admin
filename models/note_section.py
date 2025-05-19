@@ -3,10 +3,10 @@ from odoo import models, fields, api, _
 
 
 CODE_NOTE_SECTION = [
-    _(('email', _("Email"))),
-    _(('sms', _("SMS"))),
-    _(('paper', _("Paper"))),
-    _(('other', _("Other"))),
+    ('email', "Email"),
+    ('sms', "SMS"),
+    ('paper', "Paper"),
+    ('other', "Other"),
 ]
 class NoteSection(models.Model):
     _name = 'note.section'
