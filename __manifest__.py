@@ -8,7 +8,7 @@
     'website': "http://yourwebsite.com",
     'category': 'Tools',
     'version': '17.0.1.0.0',
-    'depends': ['base','web','mail', 'hr', 'rating', 'utm','portal'],
+    'depends': ['base','web','mail', 'hr', 'documents', 'rating', 'utm','portal'],
     'data': [
         # 'views/assets.xml',
         'security/groups.xml',
