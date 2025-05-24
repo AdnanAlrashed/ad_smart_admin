@@ -5,22 +5,22 @@
         <field name="name">ticket.form</field>
         <field name="model">ticket</field>
         <field name="arch" type="xml">
+        
             <form string="Ticket">
+                
                 <header>
-                    <!-- <button name="action_open" string="فتح" 
-                            invisible="state != 'draft'" 
-                            class="oe_highlight" 
-                            groups="ad_smart_admin.group_ticket_user"/> -->
+                    
+                    <button name="open_attachments" 
+                        string="إدارة المرفقات"
+                        type="object"
+                        class="oe_highlight"
+                        icon="fa-paperclip"/>
 
                     <button name="action_open" string="فتح" 
                         type="object"
                         invisible="state != 'draft'" 
                         class="oe_highlight" 
                         groups="ad_smart_admin.group_ticket_user"/>
-                    
-                    <!-- <button name="action_start_progress" string="بدء المعالجة" 
-                            invisible="state != 'open'" 
-                            groups="ad_smart_admin.group_ticket_technical"/> -->
 
                     <button name="action_start_progress" string="بدء المعالجة" 
                         type="object"
@@ -49,6 +49,23 @@
                     <field name="state" widget="statusbar" statusbar_visible="draft,open,in_progress,pending,solved,cancelled" options="{'clickable': '1'}"/>
                 </header>
                 <sheet>
+                    <div class="oe_button_box" name="button_box">
+                        <button class="oe_stat_button"
+                                name="action_force_sync_documents"
+                                type="object"
+                                icon="fa-file-text-o"
+                                groups="documents.group_documents_user"
+                                invisible="not id">
+                            <field string="Documents" name="document_count" widget="statinfo"/>
+                        </button>
+                        <!-- <button name="action_force_sync_documents"
+                            string="تحديث المستندات"
+                            type="object"
+                            class="oe_stat_button"
+                            icon="fa-refresh"
+                            invisible="( not id )"
+                        /> -->
+                    </div>
                     <div class="oe_title">
                         <h1>
                             <field name="note_number" readonly="1"/>
@@ -63,7 +80,8 @@
                         </group>
                         <group>
                             <field name="subject" placeholder="أدخل موضوع التذكرة..."/>
-                            <field name="partner" options="{'no_create': True}"/>
+                            <field name="from_partner" options="{'no_create': True}"/>
+                            <field name="to_partner" options="{'no_create': True}"/>
                             <field name="date" options="{'datepicker': {'daysOfWeekDisabled': [5,6]}}"/>
                             <field name="company_id" groups="base.group_multi_company"/>
                         </group>
@@ -81,11 +99,24 @@
                         <page string="الملاحظات" name="notes">
                             <field name="note" placeholder="أدخل أي ملاحظات إضافية..."/>
                         </page>
-                        <page string="المرفقات" name="attachments" invisible="not attachment_number or attachment_number == 0">
+                        <page string="المرفقات" name="attachments">
                             <field name="attachment_number" invisible="1"/>
-                            <field name="message_main_attachment_id" 
-                                filename="datas_fname"
-                                string="المرفق الرئيسي"/>
+                            <field name="attachment_ids" 
+                                widget="many2many_binary" 
+                                string="الملفات المرفقة"
+                                options="{
+                                    'preview': True,
+                                    'editable': True,
+                                    'accepted_file_extensions': '.pdf,.png,.jpg,.jpeg,.doc,.docx,.xls,.xlsx',
+                                    'upload': True
+                                }"/>
+                        </page>
+                        <page string="إعدادات المستندات" name="documents_settings" groups="base.group_multi_company">
+                            <group>
+                                <field name="documents_folder_id" 
+                                    options="{'no_create': True, 'no_open': True}"/>
+                                
+                            </group>
                         </page>
                     </notebook>
                 </sheet>
@@ -106,7 +137,7 @@
             <search string="بحث التذاكر">
                 <field name="note_number" string="رقم المذكرة"/>
                 <field name="subject" string="الموضوع" filter_domain="[('subject', 'ilike', self)]"/>
-                <field name="partner" string="العميل"/>
+                <field name="from_partner" string="العميل"/>
                 <field name="state" string="الحالة"/>
                 
                 <filter string="تذاكر مفتوحة" name="open_tickets" domain="[('state','=','open')]"/>
@@ -133,7 +164,7 @@
             <tree string="التذاكر" decoration-muted="state == 'cancelled'" decoration-success="state == 'solved'">
                 <field name="note_number" string="الرقم"/>
                 <field name="subject" string="الموضوع"/>
-                <field name="partner" string="العميل"/>
+                <field name="from_partner" string="العميل"/>
                 <field name="ticket_type" string="النوع"/>
                 <field name="state" widget="badge" decoration-info="state == 'in_progress'" decoration-warning="state == 'pending'"/>
                 <field name="secret_degree" widget="badge" options="{'color_field': 'secret_degree_color'}"/>
@@ -206,4 +237,5 @@
             parent="menu_memos_root"
             action="action_outgoing_memos"
             sequence="2"/>
+
 </odoo>
