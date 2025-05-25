@@ -47,6 +47,14 @@
                             invisible="state not in ['cancelled','solved']" 
                             groups="ad_smart_admin.group_ticket_manager"/>
                     <field name="state" widget="statusbar" statusbar_visible="draft,open,in_progress,pending,solved,cancelled" options="{'clickable': '1'}"/>
+
+                    <div class="oe_sla_timer" invisible="not sla_state">
+                    <div class="oe_sla_timer_info">
+                        <field name="sla_remaining_text" readonly="1" widget="sla_timer" options="{'format': 'HH:mm:ss'}"/>
+                        <field name="sla_state" widget="badge" options="{'color_field': 'sla_color'}"/>
+                        </div>
+                    </div>
+
                 </header>
                 <sheet>
                     <div class="oe_button_box" name="button_box">
@@ -83,12 +91,22 @@
                             <field name="from_partner" options="{'no_create': True}"/>
                             <field name="to_partner" options="{'no_create': True}"/>
                             <field name="date" options="{'datepicker': {'daysOfWeekDisabled': [5,6]}}"/>
+                            <field name="done_date" options="{'datepicker': {'daysOfWeekDisabled': [5,6]}}"/>
                             <field name="company_id" groups="base.group_multi_company"/>
                         </group>
                     </group>
                     <notebook>
                         <page string="المحتوى" name="content">
                             <field name="topic" class="oe_no_empty"/>
+                            <!-- إضافة إلى صفحة "المحتوى" -->
+                            <group name="sla_info">
+                                <field name="sla_response_time"/>
+                                <field name="sla_resolution_time"/>
+                                <field name="sla_deadline" widget="datetime"/>
+                                <field name="sla_state" widget="badge" 
+                                    options="{'color_field': 'sla_color'}"/>
+                            </group>
+                            
                         </page>
                         <page string="التعيين" name="assign">
                             <group>
@@ -99,17 +117,23 @@
                         <page string="الملاحظات" name="notes">
                             <field name="note" placeholder="أدخل أي ملاحظات إضافية..."/>
                         </page>
-                        <page string="المرفقات" name="attachments">
-                            <field name="attachment_number" invisible="1"/>
-                            <field name="attachment_ids" 
-                                widget="many2many_binary" 
-                                string="الملفات المرفقة"
-                                options="{
-                                    'preview': True,
-                                    'editable': True,
-                                    'accepted_file_extensions': '.pdf,.png,.jpg,.jpeg,.doc,.docx,.xls,.xlsx',
-                                    'upload': True
-                                }"/>
+                        
+                        <!-- استبدال صفحة المرفقات الحالية بهذا -->
+                        <page string="المرفقات" name="attachments" invisible="1">
+                            <div class="oe_attachment_view">
+                                <field name="attachment_ids" widget="many2many_binary" 
+                                    options="{
+                                        'preview': True,
+                                        'editable': True,
+                                        'accepted_file_extensions': '.pdf,.png,.jpg,.jpeg,.doc,.docx,.xls,.xlsx',
+                                        'upload': True,
+                                        'multi_upload': True
+                                    }"/>
+                                <div class="oe_attachment_stats">
+                                    <field name="attachment_number" string="عدد المرفقات"/>
+                                    <field name="document_count" string="عدد المستندات"/>
+                                </div>
+                            </div>
                         </page>
                         <page string="إعدادات المستندات" name="documents_settings" groups="base.group_multi_company">
                             <group>
@@ -117,6 +141,27 @@
                                     options="{'no_create': True, 'no_open': True}"/>
                                 
                             </group>
+                        </page>
+                        <!-- إضافة صفحة جديدة في notebook -->
+                        <page string="الملخص">
+                            <div class="oe_dashboard">
+                                <field name="sla_state" widget="sla_gauge"/>
+                                
+                                <div class="oe_quick_info">
+                                    <div class="oe_info_box">
+                                        <span>وقت الإنشاء</span>
+                                        <field name="create_date" widget="datetime"/>
+                                    </div>
+                                    <div class="oe_info_box">
+                                        <span>آخر تحديث</span>
+                                        <field name="write_date" widget="datetime"/>
+                                    </div>
+                                    <div class="oe_info_box">
+                                        <span>مدة المعالجة</span>
+                                        <field name="duration" widget="duration"/>
+                                    </div>
+                                </div>
+                            </div>
                         </page>
                     </notebook>
                 </sheet>
@@ -161,19 +206,26 @@
         <field name="name">ticket.tree</field>
         <field name="model">ticket</field>
         <field name="arch" type="xml">
-            <tree string="التذاكر" decoration-muted="state == 'cancelled'" decoration-success="state == 'solved'">
+            <tree string="التذاكر"
+                decoration-muted="state == 'cancelled'"
+                decoration-success="state == 'solved'">
+                
                 <field name="note_number" string="الرقم"/>
                 <field name="name" string="الموضوع"/>
                 <field name="from_partner" string="العميل"/>
                 <field name="ticket_type" string="النوع"/>
-                <field name="state" widget="badge" decoration-info="state == 'in_progress'" decoration-warning="state == 'pending'"/>
-                <field name="secret_degree" widget="badge" options="{'color_field': 'secret_degree_color'}"/>
-                <field name="priority" widget="badge"/>
+                <field name="state" widget="badge"
+                    decoration-info="state == 'in_progress'"
+                    decoration-warning="state == 'pending'"/>
+                <field name="sla_state" widget="badge"
+                    decoration-danger="sla_state == 'breached'"
+                    decoration-warning="sla_state == 'warning'"/>
                 <field name="date" string="التاريخ"/>
-                <field name="assing_to_id" widget="many2one_avatar_user" string="معين إلى"/>
+                <field name="assing_to_id" string="معين إلى"/>
             </tree>
         </field>
     </record>
+
 
     <!-- Actions Enhanced -->
     <record id="action_incoming_memos" model="ir.actions.act_window">
@@ -226,6 +278,18 @@
         </field>
     </record>
 
+    <record id="action_ticket_team_performance" model="ir.actions.act_window">
+    <field name="name">أداء الفريق</field>
+    <field name="res_model">ticket</field>
+    <field name="view_mode">pivot,graph</field>
+    <field name="domain">[('state','=','solved')]</field>
+    <field name="context">{
+        'group_by': ['assing_to_id'],
+        'graph_measure': ['sla_performance'],
+        'graph_mode': 'bar'
+    }</field>
+</record>
+
     <menuitem id="menu_incoming_memos"
             name="ticket in"
             parent="menu_memos_root"
@@ -237,5 +301,12 @@
             parent="menu_memos_root"
             action="action_outgoing_memos"
             sequence="2"/>
+
+            <menuitem 
+    id="menu_ticket_team_performance"
+    name="أداء الفريق"
+    parent="menu_memos_root" 
+    action="action_ticket_team_performance"
+    sequence="10"/>
 
 </odoo>
