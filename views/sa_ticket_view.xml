@@ -79,7 +79,7 @@
                             <field name="priority"/>
                         </group>
                         <group>
-                            <field name="subject" placeholder="أدخل موضوع التذكرة..."/>
+                            <field name="name" placeholder="أدخل موضوع التذكرة..."/>
                             <field name="from_partner" options="{'no_create': True}"/>
                             <field name="to_partner" options="{'no_create': True}"/>
                             <field name="date" options="{'datepicker': {'daysOfWeekDisabled': [5,6]}}"/>
@@ -136,7 +136,7 @@
         <field name="arch" type="xml">
             <search string="بحث التذاكر">
                 <field name="note_number" string="رقم المذكرة"/>
-                <field name="subject" string="الموضوع" filter_domain="[('subject', 'ilike', self)]"/>
+                <field name="name" string="الموضوع" filter_domain="[('name', 'ilike', self)]"/>
                 <field name="from_partner" string="العميل"/>
                 <field name="state" string="الحالة"/>
                 
@@ -163,7 +163,7 @@
         <field name="arch" type="xml">
             <tree string="التذاكر" decoration-muted="state == 'cancelled'" decoration-success="state == 'solved'">
                 <field name="note_number" string="الرقم"/>
-                <field name="subject" string="الموضوع"/>
+                <field name="name" string="الموضوع"/>
                 <field name="from_partner" string="العميل"/>
                 <field name="ticket_type" string="النوع"/>
                 <field name="state" widget="badge" decoration-info="state == 'in_progress'" decoration-warning="state == 'pending'"/>
@@ -213,7 +213,7 @@
                         <div class="oe_kanban_card">
                             <div class="oe_kanban_content">
                                 <div class="o_kanban_record_title">
-                                    <field name="note_number"/> - <field name="subject"/>
+                                    <field name="note_number"/> - <field name="name"/>
                                 </div>
                                 <div t-attf-class="oe_kanban_state oe_kanban_state_{{record.state.raw_value}}">
                                     <field name="state"/>

@@ -18,7 +18,8 @@ class Ticket(models.Model):
     _order = 'date desc'
     _check_company_auto = True
 
-    name = fields.Char(string='Name', default=lambda self: _('Ticekts'), required=True, copy=False)
+    # name = fields.Char(string='Name', default=lambda self: _('Ticekts'), required=True, copy=False)
+    name = fields.Char(string='Subject', required=True, index=True, tracking=True)
     note_number = fields.Char(string="Note Number", default=lambda self: _('New'), required=True, copy=False)
     administration = fields.Many2one('res.users', string="Administration")
     administration_assign = fields.Many2one('res.users', string="Administration Assign")
@@ -29,7 +30,7 @@ class Ticket(models.Model):
     secret_degree = fields.Many2one('secret.degree', string="Secret Degree")
     secret_degree_color = fields.Integer(related='secret_degree.color', string='Secret Degree Color', readonly=True)
     priority = fields.Many2one('priority', string="Priority")
-    subject = fields.Text(string="Subject", required=True)
+    # subject = fields.Text(string="Subject", required=True)
     topic = fields.Html(string="Topic")
     from_partner = fields.Many2one('res.partner', deleget=True, ondelete='restrict', string="From Partner")
     to_partner = fields.Many2one(
@@ -199,7 +200,7 @@ class Ticket(models.Model):
     # Overridden Methods
     # --------------------------
     def name_get(self):
-        return [(record.id, f"[{record.note_number}] {record.subject}") for record in self]
+        return [(record.id, f"[{record.note_number}] {record.name}") for record in self]
 
     @api.model
     def create(self, vals):
