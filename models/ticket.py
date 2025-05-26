@@ -1,6 +1,6 @@
 from odoo import models, fields, api, _
 from odoo.exceptions import UserError
-from datetime import datetime
+from datetime import datetime, timedelta
 
 
 class Ticket(models.Model):
@@ -18,7 +18,8 @@ class Ticket(models.Model):
     _order = 'date desc'
     _check_company_auto = True
 
-    name = fields.Char(string='Name', default=lambda self: _('Ticekts'), required=True, copy=False)
+    # name = fields.Char(string='Name', default=lambda self: _('Ticekts'), required=True, copy=False)
+    name = fields.Char(string='Subject', required=True, index=True, tracking=True)
     note_number = fields.Char(string="Note Number", default=lambda self: _('New'), required=True, copy=False)
     administration = fields.Many2one('res.users', string="Administration")
     administration_assign = fields.Many2one('res.users', string="Administration Assign")
@@ -29,7 +30,7 @@ class Ticket(models.Model):
     secret_degree = fields.Many2one('secret.degree', string="Secret Degree")
     secret_degree_color = fields.Integer(related='secret_degree.color', string='Secret Degree Color', readonly=True)
     priority = fields.Many2one('priority', string="Priority")
-    subject = fields.Text(string="Subject", required=True)
+    # subject = fields.Text(string="Subject", required=True)
     topic = fields.Html(string="Topic")
     from_partner = fields.Many2one('res.partner', deleget=True, ondelete='restrict', string="From Partner")
     to_partner = fields.Many2one(
@@ -46,7 +47,7 @@ class Ticket(models.Model):
     balance_date = fields.Date(string="Balance Date")
     reference_number = fields.Char(string="Reference Number")
     attachment_number = fields.Integer(string="Attachment Number", compute='_compute_attachments')
-    done_date = fields.Datetime(string="Done Date", readonly=True)
+    done_date = fields.Datetime(string="Done Date")
     account = fields.Many2one('res.partner', string="Account")
     company_id = fields.Many2one('res.company', string="Company", default=lambda self: self.env.company)
     checked_archive = fields.Boolean(string="Checked Archive")
@@ -82,6 +83,145 @@ class Ticket(models.Model):
     compute='_compute_document_count',
     store=False
 )
+
+    duration = fields.Float(
+    string="مدة المعالجة (ساعات)",
+    compute='_compute_duration',
+    store=True,
+    help="المدة من بدء المعالجة حتى الحل"
+)
+
+    @api.depends('create_date', 'done_date')
+    def _compute_duration(self):
+        for ticket in self:
+            if ticket.create_date and ticket.done_date:
+                delta = ticket.done_date - ticket.create_date
+                ticket.duration = delta.total_seconds() / 3600  # التحويل إلى ساعات
+            else:
+                ticket.duration = 0.0
+
+    # --------------------------SLA Start----------
+    
+    sla_resolution_time = fields.Integer(string="هدف وقت الحل (ساعات)", default=72)  # الوقت المستهدف
+    resolution_time_hours = fields.Float(compute='_compute_resolution_time')  # الوقت الفعلي
+    sla_deadline = fields.Datetime(string="موعد SLA النهائي", tracking=True)
+    sla_state = fields.Selection([
+        ('on_time', 'ضمن الوقت المحدد'),
+        ('warning', 'تحذير'),
+        ('breached', 'تم تجاوز الموعد')
+    ], string="حالة SLA", compute='_compute_sla_state', store=True)
+    sla_response_time = fields.Integer(string="وقت الاستجابة المستهدف (ساعات)", default=24)
+    sla_resolution_time = fields.Integer(string="وقت الحل المستهدف (ساعات)", default=72)
+    
+    @api.depends('sla_deadline', 'state')
+    def _compute_sla_state(self):
+        now = fields.Datetime.now()
+        for ticket in self:
+            if not ticket.sla_deadline or ticket.state in ['solved', 'cancelled']:
+                ticket.sla_state = False
+            elif ticket.sla_deadline < now:
+                ticket.sla_state = 'breached'
+            elif (ticket.sla_deadline - timedelta(hours=2)) < now:
+                ticket.sla_state = 'warning'
+            else:
+                ticket.sla_state = 'on_time'
+    
+    @api.model
+    def create(self, vals):
+        ticket = super(Ticket, self).create(vals)
+        if ticket.state == 'open':
+            ticket._update_sla_deadline()
+        return ticket
+    
+    def write(self, vals):
+        res = super(Ticket, self).write(vals)
+        if 'state' in vals or 'sla_response_time' in vals or 'sla_resolution_time' in vals:
+            self._update_sla_deadline()
+        return res
+    
+    def _update_sla_deadline(self):
+        for ticket in self:
+            if ticket.state == 'open':
+                ticket.sla_deadline = fields.Datetime.now() + timedelta(hours=ticket.sla_response_time)
+            elif ticket.state == 'in_progress':
+                ticket.sla_deadline = fields.Datetime.now() + timedelta(hours=ticket.sla_resolution_time)
+    # --------------------------SLA End----------
+    @api.depends('create_date', 'done_date')
+    def _compute_resolution_time(self):
+        """
+        حساب المدة بين إنشاء التذكرة وإغلاقها بالساعات
+        """
+        for ticket in self:
+            if ticket.create_date and ticket.done_date:
+                delta = ticket.done_date - ticket.create_date
+                ticket.resolution_time_hours = delta.total_seconds() / 3600  # التحويل من ثواني إلى ساعات
+            else:
+                ticket.resolution_time_hours = 0.0
+    # --------------------------الوقت المتبقي--------------------------
+    sla_remaining_text = fields.Char(
+    string="الوقت المتبقي",
+    compute='_compute_sla_remaining',
+    store=False
+)
+
+    def _compute_sla_remaining(self):
+        now = fields.Datetime.now()
+        for ticket in self:
+            if not ticket.sla_deadline:
+                ticket.sla_remaining_text = False
+            else:
+                delta = ticket.sla_deadline - now
+                ticket.sla_remaining_text = f"متبقي: {delta.days} أيام, {delta.seconds//3600} ساعات"
+    # --------------------------الوقت المتبقي--------------------------
+
+    def _check_sla_deadlines(self):
+        tickets = self.search([
+            ('sla_state', 'in', ['warning', 'breached']),
+            ('state', 'not in', ['solved', 'cancelled'])
+        ])
+        
+        for ticket in tickets:
+            if ticket.sla_state == 'breached':
+                ticket._send_notification(
+                    'SLA Breached!',
+                    f'تم تجاوز الموعد النهائي لتذكرة {ticket.note_number}'
+                )
+            elif ticket.sla_state == 'warning':
+                ticket._send_notification(
+                    'SLA Warning',
+                    f'تبقى ساعتان فقط على موعد SLA لتذكرة {ticket.note_number}'
+                )
+
+    def _send_notification(self, subject, body):
+        self.ensure_one()
+        self.message_post(
+            subject=subject,
+            body=body,
+            partner_ids=[(6, 0, [self.assing_to_id.partner_id.id])],
+            message_type='notification'
+        )
+
+    sla_performance = fields.Float(
+    string="أداء SLA (%)",
+    compute='_compute_sla_performance',
+    store=True,  # اختياري - يخزن القيمة في DB
+    digits=(3, 2),  # دقة رقمية (3 أرقام قبل العلامة، رقمين بعدها)
+    help="نسبة تحقيق أهداف SLA بناءً على وقت الحل الفعلي vs المستهدف"
+)
+
+    @api.depends('resolution_time_hours', 'sla_resolution_time', 'state')
+    def _compute_sla_performance(self):
+        for ticket in self:
+            if ticket.state != 'solved':
+                ticket.sla_performance = 0.0
+                continue
+                
+            if not ticket.sla_resolution_time or ticket.resolution_time_hours <= 0:
+                ticket.sla_performance = 0.0
+            else:
+                # معادلة الأداء (يمكن تعديلها حسب احتياجاتك)
+                performance = (ticket.sla_resolution_time / ticket.resolution_time_hours) * 100
+                ticket.sla_performance = min(120.0, max(0.0, performance))  # حد أدنى 0% وأقصى 120%
 
     def _compute_document_count(self):
         Document = self.env['documents.document'].sudo()
@@ -199,7 +339,7 @@ class Ticket(models.Model):
     # Overridden Methods
     # --------------------------
     def name_get(self):
-        return [(record.id, f"[{record.note_number}] {record.subject}") for record in self]
+        return [(record.id, f"[{record.note_number}] {record.name}") for record in self]
 
     @api.model
     def create(self, vals):

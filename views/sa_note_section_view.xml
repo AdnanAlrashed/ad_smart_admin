@@ -26,10 +26,10 @@
             <tree editable="top" string="Note_Section" sample="1" multi_edit="1">
                 <field name="name" optional="show"/>
                 <field name="foreign_name" optional="hide"/>
-                <field name="code" optional="hide"/>
+                <field name="code" optional="show"/>
                 <field name="connect_with" optional="hide"/>
                 <field name="connect_with_delegate" optional="hide"/>
-                <field name="serial_number" optional="hide"/>
+                <field name="serial_number" optional="show"/>
                 <field name="note" optional="hide"/>
             </tree>
         </field>
