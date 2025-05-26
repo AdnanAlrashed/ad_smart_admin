@@ -469,7 +469,7 @@ class Ticket(models.Model):
                 'company_id': vals.get('company_id') or self.env.company.id,
                 'parent_folder_id': parent_folder.id,
             })
-            vals['documents_folder_id'] = folder.id
+            vals['documents_folder_id'] = folder.id  
 
         ticket = super(Ticket, self).create(vals)
 
@@ -527,14 +527,14 @@ class Ticket(models.Model):
                     ('res_id', '=', ticket.id)
                 ], limit=1)
 
-                if not existing_doc:
+                if not existing_doc:  
                     Document.create({
                         'name': attachment.name,
                         'attachment_id': attachment.id,
                         'folder_id': ticket.documents_folder_id.id,
                         'owner_id': ticket.assing_to_id.id or self.env.user.id,
                         'res_model': 'ticket',
-                        'res_id': ticket.id,
+                        'res_id': ticket.id,   
                     })
         return {
             'type': 'ir.actions.act_window',
