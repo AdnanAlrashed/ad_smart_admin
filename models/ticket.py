@@ -47,7 +47,7 @@ class Ticket(models.Model):
     balance_date = fields.Date(string="Balance Date")
     reference_number = fields.Char(string="Reference Number")
     attachment_number = fields.Integer(string="Attachment Number", compute='_compute_attachments')
-    done_date = fields.Datetime(string="Done Date")
+    # done_date = fields.Datetime(string="Done Date")
     account = fields.Many2one('res.partner', string="Account")
     company_id = fields.Many2one('res.company', string="Company", default=lambda self: self.env.company)
     checked_archive = fields.Boolean(string="Checked Archive")
@@ -102,7 +102,6 @@ class Ticket(models.Model):
 
     # --------------------------SLA Start----------
     
-    sla_resolution_time = fields.Integer(string="هدف وقت الحل (ساعات)", default=72)  # الوقت المستهدف
     resolution_time_hours = fields.Float(compute='_compute_resolution_time')  # الوقت الفعلي
     sla_deadline = fields.Datetime(string="موعد SLA النهائي", tracking=True)
     sla_state = fields.Selection([
@@ -111,8 +110,31 @@ class Ticket(models.Model):
         ('breached', 'تم تجاوز الموعد')
     ], string="حالة SLA", compute='_compute_sla_state', store=True)
     sla_response_time = fields.Integer(string="وقت الاستجابة المستهدف (ساعات)", default=24)
-    sla_resolution_time = fields.Integer(string="وقت الحل المستهدف (ساعات)", default=72)
+    sla_resolution_time = fields.Integer(string="وقت الحل المستهدف (ساعات)", default=72) # الوقت المستهدف
     
+    # الحقول الجديدة
+    draft_date = fields.Datetime(string="تاريخ المسودة", readonly=True, copy=False)
+    open_date = fields.Datetime(string="تاريخ الفتح", readonly=True, copy=False)
+    in_progress_date = fields.Datetime(string="تاريخ بدء المعالجة", readonly=True, copy=False)
+    pending_date = fields.Datetime(string="تاريخ التعليق", readonly=True, copy=False)
+    solved_date = fields.Datetime(string="تاريخ الحل", readonly=True, copy=False)
+    cancelled_date = fields.Datetime(string="تاريخ الإلغاء", readonly=True, copy=False)
+    
+    # تحديث حقل done_date ليكون تلقائياً عند الحل
+    done_date = fields.Datetime(string="تاريخ الإنجاز", readonly=True, copy=False)
+
+    def _track_state_changes(self, new_state):
+        """تسجيل تواريخ تغيير الحالة تلقائياً"""
+        now = fields.Datetime.now()
+        state_date_field = f"{new_state}_date"
+        
+        if state_date_field in self._fields and not self[state_date_field]:
+            self.write({state_date_field: now})
+            
+        # إذا كانت الحالة solved، نحدّث done_date تلقائياً
+        if new_state == 'solved' and not self.done_date:
+            self.write({'done_date': now})
+
     @api.depends('sla_deadline', 'state')
     def _compute_sla_state(self):
         now = fields.Datetime.now()
@@ -126,12 +148,12 @@ class Ticket(models.Model):
             else:
                 ticket.sla_state = 'on_time'
     
-    @api.model
-    def create(self, vals):
-        ticket = super(Ticket, self).create(vals)
-        if ticket.state == 'open':
-            ticket._update_sla_deadline()
-        return ticket
+    # @api.model
+    # def create(self, vals):
+    #     ticket = super(Ticket, self).create(vals)
+    #     if ticket.state == 'open':
+    #         ticket._update_sla_deadline()
+    #     return ticket
     
     def write(self, vals):
         res = super(Ticket, self).write(vals)
@@ -146,17 +168,23 @@ class Ticket(models.Model):
             elif ticket.state == 'in_progress':
                 ticket.sla_deadline = fields.Datetime.now() + timedelta(hours=ticket.sla_resolution_time)
     # --------------------------SLA End----------
-    @api.depends('create_date', 'done_date')
+    @api.depends('open_date', 'in_progress_date', 'solved_date', 'pending_date')
     def _compute_resolution_time(self):
-        """
-        حساب المدة بين إنشاء التذكرة وإغلاقها بالساعات
-        """
         for ticket in self:
-            if ticket.create_date and ticket.done_date:
-                delta = ticket.done_date - ticket.create_date
-                ticket.resolution_time_hours = delta.total_seconds() / 3600  # التحويل من ثواني إلى ساعات
-            else:
+            if not ticket.open_date or not ticket.solved_date:
                 ticket.resolution_time_hours = 0.0
+                continue
+                
+            total_time = (ticket.solved_date - ticket.open_date).total_seconds() / 3600
+            
+            # خصم وقت التعليق من الحساب
+            if ticket.pending_date and ticket.in_progress_date:
+                if ticket.pending_date > ticket.in_progress_date:  # تم التعليق بعد البدء
+                    pending_duration = min(ticket.solved_date or datetime.max, 
+                                    ticket.in_progress_date or datetime.max) - ticket.pending_date
+                    total_time -= pending_duration.total_seconds() / 3600
+            
+            ticket.resolution_time_hours = max(0, total_time)  # تجنب القيم السالبة
     # --------------------------الوقت المتبقي--------------------------
     sla_remaining_text = fields.Char(
     string="الوقت المتبقي",
@@ -173,6 +201,27 @@ class Ticket(models.Model):
                 delta = ticket.sla_deadline - now
                 ticket.sla_remaining_text = f"متبقي: {delta.days} أيام, {delta.seconds//3600} ساعات"
     # --------------------------الوقت المتبقي--------------------------
+
+    def _send_sla_notifications(self):
+        now = fields.Datetime.now()
+        for ticket in self:
+            if not ticket.sla_deadline or ticket.state in ['solved', 'cancelled']:
+                continue
+                
+            time_remaining = (ticket.sla_deadline - now).total_seconds() / 3600
+            
+            if time_remaining <= 0:
+                ticket._send_notification(
+                    'انتهاء وقت SLA',
+                    f'تم تجاوز الموعد النهائي لتذكرة {ticket.note_number}'
+                )
+            elif time_remaining <= 2:  # تحذير قبل ساعتين
+                ticket._send_notification(
+                    'اقتراب موعد SLA',
+                    f'تبقى {round(time_remaining, 1)} ساعات لإنهاء تذكرة {ticket.note_number}'
+                )
+
+# نستدعي هذه الدالة من cron job أو عند تغيير الحالة
 
     def _check_sla_deadlines(self):
         tickets = self.search([
@@ -250,37 +299,22 @@ class Ticket(models.Model):
             }
         }
 
-    # def action_view_documents(self):
-    #     self.ensure_one()
-    #     return {
-    #         'name': 'Documents',
-    #         'type': 'ir.actions.act_window',
-    #         'res_model': 'documents.document',
-    #         'view_mode': 'kanban,tree,form',
-    #         'domain': [('res_model', '=', 'ticket'), ('res_id', '=', self.id)],
-    #         'context': {
-    #             'default_res_model': 'ticket',
-    #             'default_res_id': self.id,
-    #         }
-    #     }
 
     def _sync_documents(self):
         Document = self.env['documents.document'].sudo()
+        existing_docs = Document.search_read([
+            ('res_model', '=', 'ticket'),
+            ('res_id', 'in', self.ids)
+        ], fields=['attachment_id', 'res_id'])
+
+        existing_map = {
+            (doc['attachment_id'], doc['res_id']) for doc in existing_docs
+        }
+
         for ticket in self:
             for attachment in ticket.attachment_ids:
-                attachment.write({
-                    'folder_id': ticket.documents_folder_id.id,
-                    'res_model': 'ticket',
-                    'res_id': ticket.id,
-                })
-
-                existing_doc = Document.search([
-                    ('attachment_id', '=', attachment.id),
-                    ('res_model', '=', 'ticket'),
-                    ('res_id', '=', ticket.id)
-                ], limit=1)
-
-                if not existing_doc:
+                key = (attachment.id, ticket.id)
+                if key not in existing_map:
                     Document.create({
                         'name': attachment.name,
                         'attachment_id': attachment.id,
@@ -291,35 +325,54 @@ class Ticket(models.Model):
                     })
 
     def action_open(self):
-        self.ensure_one()
-        if self.state != 'draft':
-            raise UserError(_("يمكن فتح التذاكر في حالة مسودة فقط"))
-        return self.write({'state': 'open'})
+        for ticket in self:
+            if ticket.state != 'draft':
+                raise UserError(_("يمكن فتح التذاكر في حالة مسودة فقط"))
+            ticket.write({'state': 'open'})
+            ticket._track_state_changes('open')
 
     def action_start_progress(self):
-        self.ensure_one()
-        if not self.assing_to_id:
-            raise UserError(_("يجب تعيين التذكرة أولاً"))
-        if not self.env.user.has_group('ad_smart_admin.group_ticket_technical'):
-            raise UserError(_("ليس لديك صلاحية بدء المعالجة"))
-        return self.write({'state': 'in_progress'})
+        for ticket in self:
+            if not ticket.assing_to_id:
+                raise UserError(_("يجب تعيين التذكرة أولاً"))
+            if not self.env.user.has_group('ad_smart_admin.group_ticket_technical'):
+                raise UserError(_("ليس لديك صلاحية بدء المعالجة"))
+            ticket.write({'state': 'in_progress'})
+            ticket._track_state_changes('in_progress')
 
     def action_mark_pending(self):
-        return self.write({'state': 'pending'})
+        for ticket in self:
+            if not ticket.assing_to_id:
+                raise UserError(_("يجب تعيين التذكرة أولاً"))
+            if not self.env.user.has_group('ad_smart_admin.group_ticket_technical'):
+                raise UserError(_("ليس لديك صلاحية بدء المعالجة"))
+            ticket.write({'state': 'pending'})
+            ticket._track_state_changes('pending')
 
     def action_mark_solved(self):
-        return self.write({
-            'state': 'solved',
-            'done_date': datetime.now()
-        })
-
+        for ticket in self:
+            if not ticket.assing_to_id:
+                raise UserError(_("يجب تعيين التذكرة أولاً"))
+            if not self.env.user.has_group('ad_smart_admin.group_ticket_technical'):
+                raise UserError(_("ليس لديك صلاحية بدء المعالجة"))
+            ticket.write({'state': 'solved'})
+            ticket._track_state_changes('solved')
     def action_cancel(self):
-        if not self.env.user.has_group('ad_smart_admin.group_ticket_manager'):
-            raise UserError(_("يتطلب صلاحية مدير"))
-        return self.write({'state': 'cancelled'})
-
+        for ticket in self:
+            if not ticket.assing_to_id:
+                raise UserError(_("يجب تعيين التذكرة أولاً"))
+            if not self.env.user.has_group('ad_smart_admin.group_ticket_technical'):
+                raise UserError(_("ليس لديك صلاحية بدء المعالجة"))
+            ticket.write({'state': 'cancelled'})
+            ticket._track_state_changes('cancelled')
     def action_reset_to_draft(self):
-        return self.write({'state': 'draft'})
+        for ticket in self:
+            if not ticket.assing_to_id:
+                raise UserError(_("يجب تعيين التذكرة أولاً"))
+            if not self.env.user.has_group('ad_smart_admin.group_ticket_technical'):
+                raise UserError(_("ليس لديك صلاحية بدء المعالجة"))
+            ticket.write({'state': 'draft'})
+            ticket._track_state_changes('draft')
 
     # --------------------------
     # Helper Methods
@@ -341,6 +394,47 @@ class Ticket(models.Model):
     def name_get(self):
         return [(record.id, f"[{record.note_number}] {record.name}") for record in self]
 
+    # @api.model
+    # def create(self, vals):
+    #     if not vals.get('note_section') or not vals.get('ticket_type'):
+    #         raise UserError(_("القسم ونوع التذكرة مطلوبان"))
+
+    #     note_section = self.env['note.section'].browse(vals['note_section'])
+    #     ticket_type = self.env['ticket.type'].browse(vals['ticket_type'])
+
+    #     if not note_section.exists() or not ticket_type.exists():
+    #         raise UserError(_("قسم أو نوع تذكرة غير صالح"))
+
+    #     # Generate sequence
+    #     sequence_code = f"memo.{note_section.code.lower()}.{ticket_type.code.lower()}"
+    #     sequence = self.env['ir.sequence'].sudo().search([('code', '=', sequence_code)], limit=1)
+
+    #     if not sequence:
+    #         sequence = self.env['ir.sequence'].sudo().create({
+    #             'name': f"تسلسل {note_section.name} - {ticket_type.name}",
+    #             'code': sequence_code,
+    #             'prefix': f"{note_section.code}/{ticket_type.code}/",
+    #             'padding': 5,
+    #             'number_increment': 1,
+    #         })
+
+    #     vals['note_number'] = sequence.next_by_id() or 'NEW'
+
+    #     if not vals.get('documents_folder_id'):
+    #         parent_folder = self.env['documents.folder'].sudo().search([('name', '=', 'Tickets')], limit=1)
+    #         if not parent_folder:
+    #             parent_folder = self.env['documents.folder'].sudo().create({'name': 'Tickets'})
+    #         folder = self.env['documents.folder'].sudo().create({
+    #             'name': f"مرفقات التذكرة {vals.get('note_number', 'جديد')}",
+    #             'company_id': vals.get('company_id') or self.env.company.id,
+    #             'parent_folder_id': parent_folder.id,
+    #         })
+    #         vals['documents_folder_id'] = folder.id
+
+    #     ticket = super(Ticket, self).create(vals)
+    #     ticket._sync_documents()
+    #     return ticket
+
     @api.model
     def create(self, vals):
         if not vals.get('note_section') or not vals.get('ticket_type'):
@@ -352,7 +446,6 @@ class Ticket(models.Model):
         if not note_section.exists() or not ticket_type.exists():
             raise UserError(_("قسم أو نوع تذكرة غير صالح"))
 
-        # Generate sequence
         sequence_code = f"memo.{note_section.code.lower()}.{ticket_type.code.lower()}"
         sequence = self.env['ir.sequence'].sudo().search([('code', '=', sequence_code)], limit=1)
 
@@ -379,8 +472,13 @@ class Ticket(models.Model):
             vals['documents_folder_id'] = folder.id
 
         ticket = super(Ticket, self).create(vals)
+
+        if ticket.state == 'open':
+            ticket._update_sla_deadline()
+
         ticket._sync_documents()
         return ticket
+
 
     def write(self, vals):
         result = super(Ticket, self).write(vals)

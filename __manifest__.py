@@ -11,6 +11,8 @@
     'depends': ['base','web','mail', 'hr', 'documents', 'rating', 'utm','portal'],
     'data': [
         # 'views/assets.xml',
+        'data/models.xml',
+        'data/cron.xml',
         'security/groups.xml',
         'security/ir.model.access.csv',  # صلاحيات الوصول
         'security/record_rules.xml',  # صلاحيات الوصول

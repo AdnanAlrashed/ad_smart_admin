@@ -163,6 +163,21 @@
                                 </div>
                             </div>
                         </page>
+                        <page string="التتبع الزمني" name="time_tracking">
+                            <group>
+                                <field name="draft_date" widget="datetime" readonly="1"/>
+                                <field name="open_date" widget="datetime" readonly="1"/>
+                                <field name="in_progress_date" widget="datetime" readonly="1"/>
+                                <field name="pending_date" widget="datetime" readonly="1"/>
+                                <field name="solved_date" widget="datetime" readonly="1"/>
+                                <field name="cancelled_date" widget="datetime" readonly="1"/>
+                            </group>
+                            <group>
+                                <field name="sla_deadline" widget="datetime" readonly="1"/>
+                                <field name="resolution_time_hours" string="الوقت الفعلي (ساعات)" readonly="1"/>
+                                <field name="sla_performance" widget="progressbar" options="{'editable': False}"/>
+                            </group>
+                        </page>
                     </notebook>
                 </sheet>
                 <div class="oe_chatter">
