@@ -1,0 +1,6 @@
+<odoo>
+    <record id="model_ticket" model="ir.model">
+        <field name="name">Ticket</field>
+        <field name="model">ticket</field>
+    </record>
+</odoo>

@@ -1,6 +1,6 @@
 <odoo>
 
-    <menuitem id="menu_main" name="Smart Amin"/>
+    <menuitem id="menu_main" name="Smart Amin" web_icon="ad_smart_admin,static/src/image/memo.png" sequence="1"/>
     <menuitem id="menu_menu_main" name="Preparation" parent="menu_main"/>
     <menuitem id="menu_memos_root" name="oprations" parent="menu_main"/>
     
