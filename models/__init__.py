@@ -4,3 +4,4 @@ from . import secret_degree
 from . import ticket_type
 from . import priority
 from . import ticket
+from . import ticket_referral

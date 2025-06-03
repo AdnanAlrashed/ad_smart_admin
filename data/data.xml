@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- بيانات أولية لـ note.section -->
+    <record id="note_section_email" model="note.section">
+        <field name="name">البريد الإلكتروني</field>
+        <field name="code">email</field>
+    </record>
+    <record id="note_section_sms" model="note.section">
+        <field name="name">رسالة نصية</field>
+        <field name="code">sms</field>
+    </record>
+    <record id="note_section_paper" model="note.section">
+        <field name="name">ورقي</field>
+        <field name="code">paper</field>
+    </record>
+    <record id="note_section_other" model="note.section">
+        <field name="name">أخرى</field>
+        <field name="code">other</field>
+    </record>
+
+    <!-- بيانات أولية لـ priority -->
+    <record id="priority_high" model="priority">
+        <field name="name">عالية</field>
+        <field name="code">high</field>
+        <field name="color">#FF0000</field>
+        <field name="is_default">False</field>
+    </record>
+    <record id="priority_medium" model="priority">
+        <field name="name">متوسطة</field>
+        <field name="code">medium</field>
+        <field name="color">#FFA500</field>
+        <field name="is_default">True</field>
+    </record>
+    <record id="priority_low" model="priority">
+        <field name="name">منخفضة</field>
+        <field name="code">low</field>
+        <field name="color">#0FC640</field>
+        <field name="is_default">False</field>
+    </record>
+    <record id="priority_other" model="priority">
+        <field name="name">أخرى</field>
+        <field name="code">other</field>
+        <field name="color">#808080</field>
+        <field name="is_default">False</field>
+    </record>
+
+    <!-- بيانات أولية لـ secret.degree -->
+    <record id="secret_degree_top_secret" model="secret.degree">
+        <field name="name">سرية قصوى</field>
+        <field name="code">top_secret</field>
+        <field name="color">1</field>
+        <field name="is_default">False</field>
+    </record>
+    <record id="secret_degree_secret" model="secret.degree">
+        <field name="name">سرية</field>
+        <field name="code">secret</field>
+        <field name="color">2</field>
+        <field name="is_default">False</field>
+    </record>
+    <record id="secret_degree_low" model="secret.degree">
+        <field name="name">منخفضة</field>
+        <field name="code">low</field>
+        <field name="color">3</field>
+        <field name="is_default">False</field>
+    </record>
+    <record id="secret_degree_normal" model="secret.degree">
+        <field name="name">عادية</field>
+        <field name="code">normal</field>
+        <field name="color">4</field>
+        <field name="is_default">True</field>
+    </record>
+    <record id="secret_degree_other" model="secret.degree">
+        <field name="name">أخرى</field>
+        <field name="code">other</field>
+        <field name="color">5</field>
+        <field name="is_default">False</field>
+    </record>
+
+
+    <!-- بيانات أولية لـ ticket.type -->
+
+    <record id="ticket_type_in" model="ticket.type">
+        <field name="name">وارد</field>
+        <field name="code">in</field>
+        <field name="color">#e74c3c</field>
+    </record>
+    
+    <record id="ticket_type_out" model="ticket.type">
+        <field name="name">صادر</field>
+        <field name="code">out</field>
+        <field name="color">#95a5a6</field>
+    </record>
+    <!-- بيانات أولية لـ ticket.status -->
+    <!-- <record id="ticket_status_new" model="ticket.status">
+        <field name="name">جديد</field>
+    </record>
+    <record id="ticket_status_in_progress" model="ticket.status">
+        <field name="name">قيد المعالجة</field>
+    </record>
+    <record id="ticket_status_resolved" model="ticket.status">
+        <field name="name">تم الحل</field>
+    </record>
+    <record id="ticket_status_closed" model="ticket.status">
+        <field name="name">مغلق</field>
+    </record> -->
+</odoo>

@@ -17,7 +17,30 @@ class Ticket(models.Model):
     ]
     _order = 'date desc'
     _check_company_auto = True
+    # أضف هذه الدالة في بداية النموذج
+    @api.model
+    def _get_current_user_department(self):
+        """Get the current user's department"""
+        user = self.env.user
+        if user.employee_ids:
+            return user.employee_ids[0].department_id.id
+        return False
 
+    # قم بتعديل الحقول الموجودة لتكون كالتالي:
+    company_id = fields.Many2one(
+        'res.company', 
+        string="Company", 
+        default=lambda self: self.env.company,
+        readonly=True
+    )
+
+    current_department_id = fields.Many2one(
+        'hr.department',
+        string='القسم الحالي',
+        tracking=True,
+        default=lambda self: self._get_current_user_department(),
+        readonly=True
+    )
     # name = fields.Char(string='Name', default=lambda self: _('Ticekts'), required=True, copy=False)
     name = fields.Char(string='Subject', required=True, index=True, tracking=True)
     note_number = fields.Char(string="Note Number", default=lambda self: _('New'), required=True, copy=False)
@@ -49,7 +72,7 @@ class Ticket(models.Model):
     attachment_number = fields.Integer(string="Attachment Number", compute='_compute_attachments')
     # done_date = fields.Datetime(string="Done Date")
     account = fields.Many2one('res.partner', string="Account")
-    company_id = fields.Many2one('res.company', string="Company", default=lambda self: self.env.company)
+    # company_id = fields.Many2one('res.company', string="Company", default=lambda self: self.env.company)
     checked_archive = fields.Boolean(string="Checked Archive")
 
     attachment_ids = fields.Many2many(
@@ -64,6 +87,7 @@ class Ticket(models.Model):
     state = fields.Selection([
         ('draft', 'مسودة'),
         ('open', 'مفتوحة'),
+        ('referred', 'محولة'),  # الحالة الجديدة
         ('in_progress', 'قيد المعالجة'),
         ('pending', 'معلقة'),
         ('solved', 'تم الحل'),
@@ -122,6 +146,43 @@ class Ticket(models.Model):
     
     # تحديث حقل done_date ليكون تلقائياً عند الحل
     done_date = fields.Datetime(string="تاريخ الإنجاز", readonly=True, copy=False)
+
+     # إضافة الحقول الجديدة الخاصة بالإحالات
+    referral_ids = fields.One2many(
+        'ticket.referral', 
+        'ticket_id', 
+        string='سجل الإحالات'
+    )
+    # current_department_id = fields.Many2one(
+    #     'hr.department',
+    #     string='القسم الحالي',
+    #     tracking=True
+    # )
+    referral_count = fields.Integer(
+        compute='_compute_referral_count',
+        string='عدد الإحالات'
+    )
+    
+    def _compute_referral_count(self):
+        for ticket in self:
+            ticket.referral_count = len(ticket.referral_ids)
+    
+    def action_open_referral_wizard(self):
+        # تأكيد وجود القسم الحالي
+        if not self.current_department_id:
+            raise UserError("يجب تعيين قسم حالي للتذكرة قبل الإحالة")
+        return {
+            'type': 'ir.actions.act_window',
+            'name': 'إحالة التذكرة',
+            'res_model': 'ticket.referral.wizard',
+            'view_mode': 'form',
+            'target': 'new',
+            'context': {
+                'default_ticket_id': self.id,
+                'default_from_department_id': self.current_department_id.id,
+                'default_is_urgent': False
+            }
+        }
 
     def _track_state_changes(self, new_state):
         """تسجيل تواريخ تغيير الحالة تلقائياً"""
